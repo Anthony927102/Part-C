@@ -1,0 +1,42 @@
+
+Fill this and submitIt_LK with the executable.
+
+GROUP#: 9
+
+Must have divided the work as specified.
+If the member did not fully contribute to the assigned part,
+do not list his/her name!!!!!
+1.State who did what by indicating: 
+  Member A tasks (getEword) - who: Andy Guadarrama
+  Member B tasks (gen) - who: Daniel Hernandez
+  Member C tasks (dictionary) - who: Anthony Perez
+  Who updated which parser functions with getEword and gen calls?
+   functions         who
+   -------------  ---------
+   story          Andy Guadarrama and Javier Pacheco
+   s              Javier Pacheco
+   afterSubject   Anthony Perez
+   afterNoun      Javier Pacheco
+   afterObject    Andy Guadarrama
+   noun           Javier Pacheco
+   verb           Anthony Perez
+   tense          Anthony Perez
+   be             Daniel Hernandez
+
+  
+
+2. Who came to the meeting to put together the work?
+   Andy Guadarrama, Daniel Hernandez, Javier Pacheco, Anthony Perez
+
+3. You have included all the required comments?
+   (updated the grammar rules in comments?)
+   Yes
+
+4. The project produced correct output for all 6
+   test cases?
+   Yes
+
+5. If you did EC error recovery,
+   test 7 worked and produced translated.txt and errors.txt?
+   N/A
+   
