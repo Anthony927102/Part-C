@@ -387,7 +387,7 @@ void noun() {
 }
 
 // Grammar: <verb> -> WORD2 #getEword#
-// Done by: Andy
+// Done by: Anthony P
 void verb() {
     cout << "Processing <verb>" << endl;
     if (saved_token == WORD2) match(WORD2);
