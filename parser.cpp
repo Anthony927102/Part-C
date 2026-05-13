@@ -19,12 +19,18 @@ cat scanner.cpp parser.cpp > myparser.cpp
 // Global saved token and lexeme for one-token lookahead
 tokentype saved_token;
 string saved_lexeme;
+
+bool tracing = true;
+ofstream errorfile;
 // syntaxerror1: called when an unexpected token is found in a non-terminal
 // Type of error: unexpected token found while parsing a non-terminal
 // Done by: Andy 
 void syntaxerror1(string token, string nonterminal) {
     cout << "SYNTAX ERROR: unexpected " << token
          << " found in " << nonterminal << endl;
+    if (errorfile.is_open()){
+        errorfile << "SYNTAX ERROR: unexpected " << token << " found in " << nonterminal << endl;
+    }
     exit(1);
 }
 // syntaxerror2: called when the scanner returns a word that is not a valid token
@@ -32,6 +38,10 @@ void syntaxerror1(string token, string nonterminal) {
 // Done by: Daniel H
 void syntaxerror2(string token, string nonterminal) {
     cout << "Lexical error: " << token << " is not a valid token" << endl;
+
+    if (errorfile.is_open()){
+        errorfile << "Lexical error: " << token << " is not a valid token" << endl;
+    }
 }
 // next_token: calls scanner to get next token; reports lexical errors via syntaxerror2
 // Purpose: advance the lookahead; on lexical error, report it and keep the ERROR token
@@ -48,13 +58,35 @@ tokentype next_token() {
 // Done by: Daniel H
 bool match(tokentype expected) {
     if (saved_token == expected) {
-        cout << "Matched " << tokenName[saved_token] << endl;
+        if (tracing)
+            cout << "Matched " << tokenName[saved_token] << endl;
         if (saved_token != EOFM)
             next_token();
         return true;
     } else {
-        syntaxerror1(saved_lexeme, tokenName[expected]);
-        return false;
+        //syntaxerror1(saved_lexeme, tokenName[expected]);
+        //return false;
+        cout << "SYNTAX ERROR: expected " << tokenName[expected]
+            << " but found " << saved_lexeme << endl;
+        if (errorfile.is_open()){
+            errorfile << "SYNTAX ERROR: expected " << tokenName[expected]
+                << " but found " << saved_lexeme << endl;
+        }
+        
+        cout << "Skip token (s) or replace (r): ";
+        char choice;
+        cin >> choice;
+        
+        if (choice == 's'){
+            next_token();
+            return match(expected);
+        } else if (choice == 'r'){
+            saved_token = expected;
+            return true;
+        } else {
+            syntaxerror1(saved_lexeme, tokenName[expected]);
+            return false;
+        }
     }
 }
 // -------- RDP functions - one per non-term -------------------
@@ -71,18 +103,18 @@ void be();
 // Grammar: <story> -> <s> { <s> } EOFM
 // Done by: Andy &  Javier
 void story() {
-    cout << "Processing <story>" << endl;
+    if (tracing) cout << "Processing <story>" << endl;
     s();
     while (saved_token != EOFM) {
         s();
     }
     match(EOFM);
-    cout << "Successfully parsed <story>." << endl;
+    if (tracing) cout << "Successfully parsed <story>." << endl;
 }
 // Grammar: <s> -> [CONNECTOR] <noun> SUBJECT <afterSubject> PERIOD
 // Done by: Javier
 void s() {
-    cout << "Processing <s>" << endl;
+    if (tracing) cout << "Processing <s>" << endl;
     if (saved_token == CONNECTOR) {
         match(CONNECTOR);
     }
@@ -94,7 +126,7 @@ void s() {
 // Grammar: <noun> -> PRONOUN | WORD1
 // Done by: Javier
 void noun() {
-    cout << "Processing <noun>" << endl;
+    if (tracing) cout << "Processing <noun>" << endl;
     if (saved_token == PRONOUN) {
         match(PRONOUN);
     } else if (saved_token == WORD1) {
@@ -107,7 +139,7 @@ void noun() {
 //                          | <verb> <tense>
 // Done by: Anthony P
 void afterSubject() {
-    cout << "Processing <afterSubject>" << endl;
+    if (tracing) cout << "Processing <afterSubject>" << endl;
     if (saved_token == PRONOUN || saved_token == WORD1) {
         noun();
         afterNoun();
@@ -123,7 +155,7 @@ void afterSubject() {
 //                       | <be>
 // Done by: Javier
 void afterNoun() {
-    cout << "Processing <afterNoun>" << endl;
+    if (tracing) cout << "Processing <afterNoun>" << endl;
     if (saved_token == OBJECT) {
         match(OBJECT);
         afterObject();
@@ -141,7 +173,7 @@ void afterNoun() {
 //                         | <verb> <tense>
 // Done by: Andy
 void afterObject() {
-    cout << "Processing <afterObject>" << endl;
+    if (tracing) cout << "Processing <afterObject>" << endl;
     if (saved_token == PRONOUN || saved_token == WORD1) {
         noun();
         match(DESTINATION);
@@ -157,7 +189,7 @@ void afterObject() {
 // Grammar: <verb> -> WORD2
 // Done by: Andy
 void verb() {
-    cout << "Processing <verb>" << endl;
+    if (tracing) cout << "Processing <verb>" << endl;
     if (saved_token == WORD2) {
         match(WORD2);
     } else {
@@ -167,7 +199,7 @@ void verb() {
 // Grammar: <tense> -> VERB | VERBNEG | VERBPAST | VERBPASTNEG
 // Done by: Anthony P
 void tense() {
-    cout << "Processing <tense>" << endl;
+    if (tracing) cout << "Processing <tense>" << endl;
     if (saved_token == VERB) {
         match(VERB);
     } else if (saved_token == VERBNEG) {
@@ -183,7 +215,7 @@ void tense() {
 // Grammar: <be> -> IS | WAS
 // Done by: Daniel
 void be() {
-    cout << "Processing <be>" << endl;
+    if (tracing) cout << "Processing <be>" << endl;
     if (saved_token == IS) {
         match(IS);
     } else if (saved_token == WAS) {
@@ -200,12 +232,15 @@ int main() {
     cout << "Enter the input file name: ";
     cin >> filename;
     fin.open(filename.c_str());
+
+    errorfile.open("errors.txt");
     // Prime the lookahead with the first token
     next_token();
     // Call <story> to start parsing
     story();
     // Close the input file
     fin.close();
+    errorfile.close();
     return 0;
 } // end
 // ** require no other input files!
