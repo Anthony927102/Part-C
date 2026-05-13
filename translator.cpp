@@ -370,3 +370,4 @@ int main() {
     translated.close();
 
     return 0;
+}
