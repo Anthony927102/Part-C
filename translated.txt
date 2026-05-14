@@ -1,0 +1,9 @@
+CONNECTOR: Then
+ACTOR: I/me
+DESCRIPTION: rika
+TENSE: IS
+ACTOR: I/me
+DESCRIPTION: teacher
+TENSE: IS
+CONNECTOR: Therefore
+ACTOR: I/me

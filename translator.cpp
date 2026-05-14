@@ -187,12 +187,18 @@ string saved_lexeme;
 string saved_E_word;
 tokentype saved_tense_token;
 ofstream translated;
+bool tracing = false; // set to true to enable tracing, false to disable tracing
+ofstream errorfile;
 
 // syntaxerror1: called when an unexpected token is found in a non-terminal
 // Done by: Andy
 void syntaxerror1(string token, string nonterminal) {
     cout << "SYNTAX ERROR: unexpected " << token
          << " found in " << nonterminal << endl;
+    if (errorfile.is_open()) {
+        errorfile << "SYNTAX ERROR: unexpected " << token
+                  << " found in " << nonterminal << endl;
+    }
     exit(1);
 }
 
@@ -200,6 +206,9 @@ void syntaxerror1(string token, string nonterminal) {
 // Done by: Daniel H
 void syntaxerror2(string token, string nonterminal) {
     cout << "Lexical error: " << token << " is not a valid token" << endl;
+    if (errorfile.is_open()) {
+        errorfile << "Lexical error: " << token << " is not a valid token" << endl;
+    }
 }
 
 // next_token: calls scanner to get next token; reports lexical errors
@@ -215,13 +224,35 @@ tokentype next_token() {
 // Done by: Daniel H
 bool match(tokentype expected) {
     if (saved_token == expected) {
-        cout << "Matched " << tokenName[saved_token] << endl;
+        if (tracing)
+            cout << "Matched " << tokenName[saved_token] << endl;
         if (saved_token != EOFM)
             next_token();
         return true;
     } else {
-        syntaxerror1(saved_lexeme, tokenName[expected]);
-        return false;
+        cout << "SYNTAX ERROR: expected " << tokenName[expected]
+             << " but found " << saved_lexeme << endl;
+        if (errorfile.is_open()) {
+            errorfile << "SYNTAX ERROR: expected " << tokenName[expected]
+                      << " but found " << saved_lexeme << endl;
+        }
+
+        cout << "Skip token (s) or replace (r): ";
+        char choice;
+        cin >> choice;
+
+        if (choice == 's') {
+            next_token();
+            return match(expected);
+        } else if (choice == 'r') {
+            saved_token = expected;
+            if (saved_token != EOFM)
+                next_token();
+            return true;
+        } else {
+            syntaxerror1(saved_lexeme, tokenName[expected]);
+            return false;
+        }
     }
 }
 
@@ -269,19 +300,19 @@ void be();
 // Grammar: <story> -> <s> { <s> } EOFM
 // Done by: Andy & Javier
 void story() {
-    cout << "Processing <story>" << endl;
+    if (tracing) cout << "Processing <story>" << endl;
     s();
     while (saved_token != EOFM)
         s();
     match(EOFM);
-    cout << "Successfully parsed <story>." << endl;
+    if (tracing) cout << "Successfully parsed <story>." << endl;
 }
 
 // Grammar: <s> -> [CONNECTOR #getEword# #gen(CONNECTOR)#]
-//                 <noun> #getEword# SUBJECT #gen(ACTOR)# <afterSubject>
+//                 <noun> #getEword# SUBJECT #gen(ACTOR)# <afterSubject> PERIOD
 // Done by: Javier
 void s() {
-    cout << "Processing <s>" << endl;
+    if (tracing) cout << "Processing <s>" << endl;
     if (saved_token == CONNECTOR) {
         getEword();
         match(CONNECTOR);
@@ -292,13 +323,14 @@ void s() {
     match(SUBJECT);
     gen("ACTOR");
     afterSubject();
+    match(PERIOD);
 }
 
-// Grammar: <afterSubject> -> <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)# PERIOD
+// Grammar: <afterSubject> -> <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)#
 //                          | <noun> #getEword# <afterNoun>
 // Done by: Anthony P
 void afterSubject() {
-    cout << "Processing <afterSubject>" << endl;
+    if (tracing) cout << "Processing <afterSubject>" << endl;
     if (saved_token == WORD2) {
         getEword();
         verb();
@@ -306,7 +338,6 @@ void afterSubject() {
         saved_tense_token = saved_token;
         tense();
         gen("TENSE");
-        match(PERIOD);
     } else if (saved_token == WORD1 || saved_token == PRONOUN) {
         getEword();
         noun();
@@ -316,18 +347,17 @@ void afterSubject() {
     }
 }
 
-// Grammar: <afterNoun> -> <be> #gen(DESCRIPTION)# #gen(TENSE)# PERIOD
-//                       | DESTINATION #gen(TO)# <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)# PERIOD
+// Grammar: <afterNoun> -> <be> #gen(DESCRIPTION)# #gen(TENSE)#
+//                       | DESTINATION #gen(TO)# <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)#
 //                       | OBJECT #gen(OBJECT)# <afterObject>
 // Done by: Javier
 void afterNoun() {
-    cout << "Processing <afterNoun>" << endl;
+    if (tracing) cout << "Processing <afterNoun>" << endl;
     if (saved_token == IS || saved_token == WAS) {
         saved_tense_token = saved_token;
         be();
         gen("DESCRIPTION");
         gen("TENSE");
-        match(PERIOD);
     } else if (saved_token == DESTINATION) {
         match(DESTINATION);
         gen("TO");
@@ -337,7 +367,6 @@ void afterNoun() {
         saved_tense_token = saved_token;
         tense();
         gen("TENSE");
-        match(PERIOD);
     } else if (saved_token == OBJECT) {
         match(OBJECT);
         gen("OBJECT");
@@ -347,11 +376,11 @@ void afterNoun() {
     }
 }
 
-// Grammar: <afterObject> -> <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)# PERIOD
-//                         | <noun> #getEword# DESTINATION #gen(TO)# <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)# PERIOD
+// Grammar: <afterObject> -> <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)#
+//                         | <noun> #getEword# DESTINATION #gen(TO)# <verb> #getEword# #gen(ACTION)# <tense> #gen(TENSE)#
 // Done by: Andy
 void afterObject() {
-    cout << "Processing <afterObject>" << endl;
+    if (tracing) cout << "Processing <afterObject>" << endl;
     if (saved_token == WORD2) {
         getEword();
         verb();
@@ -359,7 +388,6 @@ void afterObject() {
         saved_tense_token = saved_token;
         tense();
         gen("TENSE");
-        match(PERIOD);
     } else if (saved_token == WORD1 || saved_token == PRONOUN) {
         getEword();
         noun();
@@ -371,7 +399,6 @@ void afterObject() {
         saved_tense_token = saved_token;
         tense();
         gen("TENSE");
-        match(PERIOD);
     } else {
         syntaxerror1(saved_lexeme, "afterObject");
     }
@@ -380,7 +407,7 @@ void afterObject() {
 // Grammar: <noun> -> WORD1 #getEword# | PRONOUN #getEword#
 // Done by: Javier
 void noun() {
-    cout << "Processing <noun>" << endl;
+    if (tracing) cout << "Processing <noun>" << endl;
     if (saved_token == PRONOUN)     match(PRONOUN);
     else if (saved_token == WORD1)  match(WORD1);
     else syntaxerror1(saved_lexeme, "noun");
@@ -389,7 +416,7 @@ void noun() {
 // Grammar: <verb> -> WORD2 #getEword#
 // Done by: Anthony P
 void verb() {
-    cout << "Processing <verb>" << endl;
+    if (tracing) cout << "Processing <verb>" << endl;
     if (saved_token == WORD2) match(WORD2);
     else syntaxerror1(saved_lexeme, "verb");
 }
@@ -397,7 +424,7 @@ void verb() {
 // Grammar: <tense> -> VERB #gen(TENSE)# | VERBNEG #gen(TENSE)# | VERBPAST #gen(TENSE)# | VERBPASTNEG #gen(TENSE)#
 // Done by: Anthony P
 void tense() {
-    cout << "Processing <tense>" << endl;
+    if (tracing) cout << "Processing <tense>" << endl;
     if (saved_token == VERB)             match(VERB);
     else if (saved_token == VERBNEG)     match(VERBNEG);
     else if (saved_token == VERBPAST)    match(VERBPAST);
@@ -408,7 +435,7 @@ void tense() {
 // Grammar: <be> -> IS #gen(DESCRIPTION)# #gen(TENSE)# | WAS #gen(DESCRIPTION)# #gen(TENSE)#
 // Done by: Daniel
 void be() {
-    cout << "Processing <be>" << endl;
+    if (tracing) cout << "Processing <be>" << endl;
     if (saved_token == IS)       match(IS);
     else if (saved_token == WAS) match(WAS);
     else syntaxerror1(saved_lexeme, "be");
@@ -442,6 +469,8 @@ int main()
     fin.open(filename.c_str());
     if (!fin) { cout << "ERROR: Could not open input file." << endl; return 1; }
 
+    errorfile.open("errors.txt");
+
     next_token();
 
     // calls the <story> to start parsing
@@ -451,6 +480,8 @@ int main()
     fin.close();
     // closes translated.txt
     translated.close();
+    // closes errors.txt
+    errorfile.close();
 
     // display translated.txt contents
     cout << "\n--- Translation (translated.txt) ---" << endl;
